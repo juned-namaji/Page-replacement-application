@@ -4,8 +4,8 @@ import 'server-only';
 const { Schema } = mongoose;
 
 const pageSchema = new Schema({
-    pageId: {
-        type: Number,
+    _id: {
+        type: String,
         required: true
     },
     pageName: {

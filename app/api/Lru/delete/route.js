@@ -6,19 +6,19 @@ import "server-only";
 export async function POST(request) {
     const comment = await request.json();
     const _id = comment.pageId;
-    const pageName = comment.pageName;
-    if (request.method !== 'POST') {
-        return NextResponse.error("Method Not Allowed", 405);
-    }
+    console.log(_id);
     await dbConnect();
     try {
-        if (!_id || !pageName) {
-            return NextResponse.error("Page ID and Page Name are required", 400);
-        }
-        const newPage = new Page({ _id, pageName });
+        const page = await Page.findByIdAndDelete(_id);
+        console.log(page);
+        const pageName = page.pageName;
+        console.log(pageName);
+        const newPage = new Page({ _id, pageName })
         const savedPage = await newPage.save();
+        console.log(savedPage);
         return NextResponse.json(savedPage);
     } catch (err) {
-        return NextResponse.error(err.message, 500);
+        console.log(err);
+        return NextResponse.error(err, 500);
     }
 }

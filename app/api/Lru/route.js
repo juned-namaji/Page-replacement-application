@@ -5,20 +5,23 @@ import "server-only";
 
 export async function POST(request) {
     const comment = await request.json();
-    const _id = comment.pageId;
-    const pageName = comment.pageName;
-    if (request.method !== 'POST') {
-        return NextResponse.error("Method Not Allowed", 405);
-    }
+    const { _id, pageName } = comment;
     await dbConnect();
     try {
-        if (!_id || !pageName) {
-            return NextResponse.error("Page ID and Page Name are required", 400);
-        }
         const newPage = new Page({ _id, pageName });
         const savedPage = await newPage.save();
         return NextResponse.json(savedPage);
     } catch (err) {
         return NextResponse.error(err.message, 500);
+    }
+}
+
+export async function GET() {
+    await dbConnect();
+    try {
+        const pages = await Page.find();
+        return NextResponse.json(pages);
+    } catch (err) {
+        return NextResponse.json({ error: err.Message });
     }
 }

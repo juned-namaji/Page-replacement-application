@@ -1,17 +1,83 @@
 'use client';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-const NextPageForm = ({ newPageAdded, cap, pageDeleted }) => {
-    const capacity = cap;
+const NextPageForm = ({ newPageAdded, pageDeleted }) => {
     const [pageId, setPageId] = useState('');
     const [pageName, setPageName] = useState('');
     const [loading, setLoading] = useState(false);
+    const [capacity, setCapacity] = useState(null);
+    const [duplicate, setDuplicate] = useState(false);
+
+    useEffect(() => {
+        const getCookies = async () => {
+            const res = await fetch('http://localhost:3000/api/cookies', {
+                method: 'GET'
+            })
+            if (res.ok) {
+                const ck = await res.json();
+                setCapacity(ck.cookieStore[1].value);
+                console.log(ck.cookieStore[1].value);
+            } else {
+                console.log('Cant get cookies');
+            }
+        }
+        getCookies();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setDuplicate(false);
         setLoading(true);
-        console.log("Here in formss!! Cache cap is: ", capacity);
+        const find = async () => {
+            const res = await fetch('http://localhost:3000/api/isDuplicate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pageId }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.isDuplicate) {
+                    setDuplicate(true);
+                    setLoading(false);
+                } else {
+                    const docsCount = await getDBDocs();
+                    let docs = docsCount.count;
 
+                    while (docs >= capacity) {
+                        try {
+                            const res = await fetch('http://localhost:3000/api/remove', {
+                                method: 'DELETE'
+                            })
+                            if (res.ok) {
+                                const data = await res.json();
+                                console.log(data);
+                                pageDeleted({ deleted: true, data: data.deletedPage });
+                            } else {
+                                console.log("Error in deleting element");
+                            }
+                        } catch (err) {
+                            console.log("Error: ", err);
+                        }
+                        docs--;
+                    }
+                    //creating new page
+                    const response = await fetch('http://localhost:3000/api/insertPage', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ pageId, pageName }),
+                    });
+                    await response.json();
+                    setLoading(false);
+                    newPageAdded();
+                }
+            } else {
+                console.log("Error fetching!!!");
+            }
+        }
         const getDBDocs = async () => {
             try {
                 const res = await fetch('http://localhost:3000/api/getNoOfPages', {
@@ -27,37 +93,7 @@ const NextPageForm = ({ newPageAdded, cap, pageDeleted }) => {
                 console.log("Error: ", err);
             }
         }
-        const docsCount = await getDBDocs();
-        let docs = docsCount.count;
-
-        while (docs >= capacity) {
-            try {
-                const res = await fetch('http://localhost:3000/api/remove', {
-                    method: 'DELETE'
-                })
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log("Data has been deleted: ", data.deletedPage);
-                    pageDeleted({ deleted: true, data: data.deletedPage });
-                    docs--;
-                } else {
-                    console.log("Error in deleting element");
-                }
-            } catch (err) {
-                console.log("Error: ", err);
-            }
-        }
-        //creating new page
-        const response = await fetch('http://localhost:3000/api/insertPage', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ pageId, pageName }),
-        });
-        await response.json();
-        setLoading(false);
-        newPageAdded();
+        find();
     }
 
 
@@ -81,6 +117,7 @@ const NextPageForm = ({ newPageAdded, cap, pageDeleted }) => {
                     className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-blue-500"
                 />
             </div>
+            {duplicate && (<label className="text-red-700">Duplicate page Id!! Please try another id</label>)}
             <div className="flex flex-col mb-4">
                 <label htmlFor="pageName" className="mb-1">Page Name:</label>
                 <input

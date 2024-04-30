@@ -1,66 +1,63 @@
 'use client';
-import React, { useState } from "react";
-import NextPageForm from "./components/createNewPage";
-import Pages from "./components/PageComponent";
-import CacheCapacityModal from "./components/cacheCapModal";
-import Modal from "./components/modal";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-const Home = () => {
-  const [reload, setReload] = useState(false);
-  const [cap, setCap] = useState(0);
-  const [isOpen, setIsOpen] = useState(true);
-  const [deleted, setDeleted] = useState(false);
-  const [deletedData, setDeletedData] = useState({});
+const CacheCapacityModal = () => {
+  const [cacheType, setCacheType] = useState('fifo');
+  const [maxPages, setMaxPages] = useState('');
+  const router = useRouter();
 
-  const newPageAdded = () => {
-    reload ? setReload(false) : setReload(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('http://localhost:3000/api/cookies', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cacheType, maxPages }),
+      });
+      if (res.ok) {
+        console.log('Cookies set successfully');
+      } else {
+        console.log('Error while setting cookies');
+      }
+    } catch (err) {
+      console.log("Error: ", err);
+    }
+    router.push('/home');
   };
 
-  const handleSubmitCapacity = (c) => {
-    setCap(c);
-    setIsOpen(false);
-    console.log(c);
-  }
-  const pageDeleted = ({ deleted, data }) => {
-    if (deleted) {
-      setDeleted(deleted);
-      setDeletedData(data);
-    }
-  }
-  const handleCloseModal = () => {
-    setDeleted(false);
-  }
-
   return (
-    <>
-      {deleted && (
-        <Modal
-          data={deletedData}
-          onClose={handleCloseModal}
-        />
-      )}
-
-      {!isOpen ?
-        (<main className="flex min-h-screen flex-col items-center">
-          <h1 className="text-3xl mb-8 mt-10">Hello, This is the Main Page</h1>
-          <div className="grid grid-cols-[3fr,1fr] w-full gap-4">
-            <div className="px-4 py-3">
-              <Pages reload={reload} />
-            </div>
-            <div className="fixed top-0 right-20 h-screen flex justify-center items-center">
-              <NextPageForm newPageAdded={newPageAdded} cap={cap} pageDeleted={pageDeleted} />
-            </div>
-          </div>
-        </main>) :
-        (<div>
-          <CacheCapacityModal
-            onSubmit={handleSubmitCapacity}
+    <div className={`fixed inset-0 flex justify-center items-center`}>
+      <div className="bg-white p-8 rounded-md shadow-md">
+        <h2 className="text-lg font-semibold mb-4">Set Cache Capacity and Type</h2>
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="maxPages" className="block mb-2">Max Pages:</label>
+          <input
+            id="maxPages"
+            type="number"
+            value={maxPages}
+            onChange={(e) => setMaxPages(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md mb-4"
+            required
           />
-        </div>
-        )
-      }
-    </>
+          <label htmlFor="cacheType" className="block mb-2">Cache Type:</label>
+          <select
+            id="cacheType"
+            value={cacheType}
+            onChange={(e) => setCacheType(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md mb-4"
+            required
+          >
+            <option value="fifo">First in First out</option>
+            <option value="lru">LRU Cache</option>
+          </select>
+          <button type="submit" className="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700">Submit</button>
+        </form>
+      </div>
+    </div>
   );
 };
 
-export default Home;
+export default CacheCapacityModal;
